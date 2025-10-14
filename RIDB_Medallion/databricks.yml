@@ -14,10 +14,6 @@ resources:
   jobs:
     reservations_pipeline:
       name: reservations-pipeline
-      schedule:
-        quartz_cron_expression: 59 20 13 * * ?
-        timezone_id: America/Chicago
-        pause_status: PAUSED
       tasks:
         - task_key: bronze-reservations-ingest
           notebook_task:
@@ -36,6 +32,13 @@ targets:
   dev:
     mode: development
     default: true
+    resources:
+        jobs:
+          reservations_pipeline:
+            schedule:
+              quartz_cron_expression: 59 00 13 * * ?
+              timezone_id: America/Chicago
+              pause_status: PAUSED
     variables:
       catalog_prefix: "dev_"
     workspace:
@@ -43,6 +46,14 @@ targets:
 
   prod:
     mode: production
+    resources:
+      jobs:
+        reservations_pipeline:
+          name: reservations-pipeline
+          schedule:
+            quartz_cron_expression: 59 00 13 * * ?
+            timezone_id: America/Chicago
+            pause_status: UNPAUSED
     variables:
       catalog_prefix: "prod_"
     workspace:
