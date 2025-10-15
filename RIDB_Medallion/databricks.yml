@@ -20,13 +20,34 @@ resources:
             notebook_path: /Repos/RIDB
               Project/ridb/RIDB_Medallion/src/bronze/Bronze-Reservations
             source: WORKSPACE
+        - task_key: silver-reservations-transformations
+          depends_on: 
+            - task_key: bronze-reservations-ingest
+          pipeline_task:
+            pipeline_id: c8e679b6-20fe-4072-b248-69fb7c4ca4e1          
       queue:
         enabled: true
       parameters:
         - name: catalog_prefix
           default: ${var.catalog_prefix}
       performance_target: PERFORMANCE_OPTIMIZED
-          
+  
+  pipelines:
+    pipeline_reservations_transformations:
+      name: reservations-transformations
+      libraries:
+        - glob:
+            include: /Repos/RIDB
+              Project/ridb/RIDB_Medallion/pipeline-src/reservations-transformations/transformations/silver_reservations_transform.sql
+      schema: silver
+      continuous: false
+      development: false
+      photon: true
+      channel: CURRENT
+      catalog: dev_ridb
+      serverless: true
+      root_path: /Repos/RIDB
+        Project/ridb/RIDB_Medallion/pipeline-src/reservations-transformations
 
 targets:
   dev:
@@ -36,13 +57,24 @@ targets:
         jobs:
           reservations_pipeline:
             schedule:
-              quartz_cron_expression: 59 00 13 * * ?
+              quartz_cron_expression: 59 45 14 * * ?
               timezone_id: America/Chicago
-              pause_status: PAUSED
+              pause_status: UNPAUSED
+            tasks:
+            - task_key: silver-reservations-transformations
+              pipeline_task:
+                pipeline_id: c8e679b6-20fe-4072-b248-69fb7c4ca4e1
+                full_refresh: true
+        pipelines:
+          pipeline_reservations_transformations:
+            name: reservations-transformations
+            development: true        
+            catalog: dev_ridb                       
     variables:
       catalog_prefix: "dev_"
     workspace:
       host: https://dbc-fa9371a2-3e62.cloud.databricks.com
+
 
   prod:
     mode: production
@@ -51,9 +83,18 @@ targets:
         reservations_pipeline:
           name: reservations-pipeline
           schedule:
-            quartz_cron_expression: 59 00 13 * * ?
+            quartz_cron_expression: 59 00 15 * * ?
             timezone_id: America/Chicago
             pause_status: UNPAUSED
+          tasks:
+            - task_key: silver-reservations-transformations
+              pipeline_task:
+                pipeline_id: c8e679b6-20fe-4072-b248-69fb7c4ca4e1
+                full_refresh: true
+      pipelines:
+          pipeline_reservations_transformations:
+            name: reservations-transformations
+            catalog: prod_ridb
     variables:
       catalog_prefix: "prod_"
     workspace:
