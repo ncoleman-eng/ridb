@@ -24,7 +24,8 @@ resources:
           depends_on: 
             - task_key: bronze-reservations-ingest
           pipeline_task:
-            pipeline_id: c8e679b6-20fe-4072-b248-69fb7c4ca4e1          
+            pipeline_id: ${resources.pipelines.pipeline_reservations_transformations.id}
+            full_refresh: true          
       queue:
         enabled: true
       parameters:
@@ -44,7 +45,7 @@ resources:
       development: false
       photon: true
       channel: CURRENT
-      catalog: dev_ridb
+      catalog: ${var.catalog_prefix}ridb
       serverless: true
       root_path: /Repos/RIDB
         Project/ridb/RIDB_Medallion/pipeline-src/reservations-transformations
@@ -57,19 +58,13 @@ targets:
         jobs:
           reservations_pipeline:
             schedule:
-              quartz_cron_expression: 59 45 14 * * ?
+              quartz_cron_expression: 00 55 12 * * ?
               timezone_id: America/Chicago
-              pause_status: UNPAUSED
-            tasks:
-            - task_key: silver-reservations-transformations
-              pipeline_task:
-                pipeline_id: c8e679b6-20fe-4072-b248-69fb7c4ca4e1
-                full_refresh: true
+              pause_status: UNPAUSED            
         pipelines:
           pipeline_reservations_transformations:
             name: reservations-transformations
-            development: true        
-            catalog: dev_ridb                       
+            development: true                                    
     variables:
       catalog_prefix: "dev_"
     workspace:
@@ -83,18 +78,13 @@ targets:
         reservations_pipeline:
           name: reservations-pipeline
           schedule:
-            quartz_cron_expression: 59 00 15 * * ?
+            quartz_cron_expression: 00 55 12 * * ?
             timezone_id: America/Chicago
-            pause_status: UNPAUSED
-          tasks:
-            - task_key: silver-reservations-transformations
-              pipeline_task:
-                pipeline_id: c8e679b6-20fe-4072-b248-69fb7c4ca4e1
-                full_refresh: true
+            pause_status: UNPAUSED          
       pipelines:
           pipeline_reservations_transformations:
             name: reservations-transformations
-            catalog: prod_ridb
+            schema: silver
     variables:
       catalog_prefix: "prod_"
     workspace:
