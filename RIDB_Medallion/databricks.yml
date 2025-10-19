@@ -20,6 +20,10 @@ resources:
             notebook_path: /Repos/RIDB
               Project/ridb/RIDB_Medallion/src/bronze/Bronze-Reservations
             source: WORKSPACE
+        - task_key: Date_Dim
+          notebook_task:
+            notebook_path: /Repos/RIDB Project/ridb/RIDB_Medallion/src/gold/Date_Dim
+            source: WORKSPACE
         - task_key: silver-reservations-transformations
           depends_on: 
             - task_key: bronze-reservations-ingest
@@ -36,10 +40,12 @@ resources:
   pipelines:
     pipeline_reservations_transformations:
       name: reservations-transformations
+      configuration:
+        catalog_prefix: ${var.catalog_prefix}
       libraries:
         - glob:
             include: /Repos/RIDB
-              Project/ridb/RIDB_Medallion/pipeline-src/reservations-transformations/transformations/silver_reservations_transform.sql
+              Project/ridb/RIDB_Medallion/pipeline-src/reservations-transformations/transformations/**       
       schema: silver
       continuous: false
       development: false

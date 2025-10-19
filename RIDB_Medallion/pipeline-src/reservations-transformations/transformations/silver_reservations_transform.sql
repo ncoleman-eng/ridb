@@ -11,7 +11,7 @@ CREATE FLOW reservations_auto_cdc AS
       historical_reservation_id,
       to_timestamp(order_date) AS reservation_timestamp,
       to_date(order_date) AS reservation_date,
-      COALESCE(DATEDIFF(end_date, start_date), 0) AS calculated_reservation_days,
+      COALESCE(DATEDIFF(end_date, start_date), NULL) AS reservation_length,
       to_date(start_date) AS reservation_start_date,
       to_date(end_date) AS reservation_end_date,
       CAST(number_of_people AS INT) AS number_of_people,
@@ -29,10 +29,10 @@ CREATE FLOW reservations_auto_cdc AS
       UPPER(parent_location) AS parent_location_name,
       facility_id,
       UPPER(park) AS park_name,
-      NULLIF(legacy_facility_id,'') AS legacy_facility_id,     
+      legacy_facility_id,     
       CAST(facility_latitude AS DECIMAL(8,6)) AS facility_latitude,
       CAST(facility_longitude AS DECIMAL(9,6)) AS facility_longitude,
-      NULLIF(UPPER(facility_state),'') AS facility_state,
+      UPPER(facility_state) AS facility_state,
       CASE
         WHEN REGEXP_REPLACE(TRIM(facility_zip), '[^0-9]', '') RLIKE '^[0-9]$'
              AND REGEXP_REPLACE(TRIM(facility_zip), '[^0-9]', '') <> '00000'
@@ -43,18 +43,13 @@ CREATE FLOW reservations_auto_cdc AS
       END AS facility_zip,
       region_code,
       UPPER(region_description) AS region_description,
-      product_id,
-      UPPER(inventory_type) AS inventory_type,
+      sha2(concat_ws('|', TRIM(product_id), UPPER(TRIM(inventory_type)), UPPER(use_type),UPPER(site_type)), 256) as product_sk,
+      TRIM(product_id) as product_id,
+      UPPER(TRIM(inventory_type)) AS inventory_type,
       UPPER(use_type) AS use_type,
       UPPER(site_type) AS site_type,
-      CASE
-        WHEN equipment_description = ''
-        OR equipment_length = ''
-        THEN NULL
-        ELSE SHA2(concat_ws('|',COALESCE(NULLIF(UPPER(TRIM(equipment_description)),''),''),COALESCE(NULLIF(UPPER(TRIM(equipment_length)),''),'')), 256)
-      END AS equipment_durable_key,
-      COALESCE(NULLIF(UPPER(TRIM(equipment_description)),''),'') AS equipment_description,
-      COALESCE(NULLIF(UPPER(TRIM(equipment_length)),''),'') AS equipment_length,      
+      UPPER(TRIM(equipment_description)) AS equipment_description,
+      UPPER(TRIM(equipment_length)) AS equipment_length,      
       CAST(attr_fee AS DECIMAL) AS attr_fee,
       CAST(discount AS DECIMAL) AS discount,
       CAST(tax AS DECIMAL) AS tax,
@@ -67,5 +62,5 @@ CREATE FLOW reservations_auto_cdc AS
     FROM STREAM(dev_ridb.bronze.reservations) 
 )
   KEYS (historical_reservation_id)
-  SEQUENCE BY (ingested_at, reservation_timestamp, calculated_reservation_days)
+  SEQUENCE BY (ingested_at, reservation_timestamp, reservation_length)
   COLUMNS * EXCEPT(ingested_at);
